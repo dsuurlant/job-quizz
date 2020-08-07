@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Infrastructure\Storage\Cache;
 use App\Infrastructure\Storage\DB;
+use Generator;
 use PDO;
 
 final class StuffRepository
@@ -18,12 +20,19 @@ final class StuffRepository
 
     public function load(int $id): Stuff
     {
-        $result = $this->db->query(
-            'SELECT * FROM stuff WHERE id = :id',
-            [':id' => $id]
-        );
+        $query = 'SELECT * FROM stuff WHERE id =  :id';
+        $params = [':id' => $id];
 
-        return Stuff::createFromTuple($result->fetchAll(PDO::FETCH_ASSOC));
+        if (Cache::entryExists($query, $params)) {
+            return Stuff::createFromTuple(
+                Cache::find($query, $params)
+            );
+        }
+
+        $result = $this->db->query($query, $params)->fetchAll(PDO::FETCH_ASSOC);
+        Cache::create($query, $params, $result);
+
+        return Stuff::createFromTuple($result);
     }
 
     /**
@@ -31,17 +40,25 @@ final class StuffRepository
      */
     public function loadAll(): array
     {
-        return array_map(
-            [Stuff::class, 'createFromTuple'],
-            $this->db->query("SELECT * FROM stuff")->fetchAll(PDO::FETCH_ASSOC)
-        );
+        $query = 'SELECT * FROM stuff';
+
+        if (Cache::entryExists($query, [])) {
+            $result = Cache::find($query, []);
+        } else {
+            $result = $this->db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+            Cache::create($query, [], $result);
+        }
+
+        return array_map([Stuff::class, 'createFromTuple'], $result);
     }
 
     /**
      * Also returns all stuff but without heavy memory consumption.
-     * @return \Generator
+     * Leaving caching out of the generator for now.
+     *
+     * @return Generator
      */
-    public function oneByOne(): \Generator
+    public function oneByOne(): Generator
     {
         $tuples = [];
 

@@ -27,7 +27,7 @@ final class DB
 		return $instance;
 	}
 
-	public function query(string $query, array $params = null): PDOStatement
+	public function query(string $query, array $params = []): PDOStatement
     {
         $stmt = $this->pdo->prepare($query);
         if (!$stmt) {
