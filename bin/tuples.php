@@ -3,25 +3,25 @@
 
 declare(strict_types=1);
 
-# Autoload
+// Autoload
 require __DIR__ .'/../src/bootstrap.php';
 
 use App\Infrastructure\Storage\Cache;
 use App\Infrastructure\Storage\DB;
 use App\Entity\StuffRepository;
 
-# Init query cache
+// Init query cache
 Cache::initialize();
 
-# Init DB
+// Init DB
 $db = DB::getInstance();
 
-# Let's create the table
+// Let's create the table
 $db->query(
     'CREATE TABLE stuff (id INT NOT NULL, thing VARCHAR(255) NOT NULL, PRIMARY KEY(id))',
 );
 
-# We'll insert a LOT of data first.
+// We'll insert a LOT of data first.
 $amount = 2000000;
 $insertQuery = "INSERT INTO stuff (id, thing) VALUES (:id, :thing)";
 for ($i=1; $i <= $amount; $i++) {
@@ -33,7 +33,7 @@ for ($i=1; $i <= $amount; $i++) {
     );
 }
 
-# Let's check
+// Let's check
 $repository = new StuffRepository($db);
 
 // Since we are using yield, this doesn't break even if we have millions of rows.
@@ -45,11 +45,11 @@ foreach ($repository->oneByOne() as $stuff) {
 
 assert($rowcount === $amount, 'We were able to store and retrieve all the stuff.');
 
-# Let's see if our query cache works
+// Let's see if our query cache works
 $stuff1 = $repository->load(1);
 $stuff2 = $repository->load(1);
 
 assert(reset($stuff1) === reset($stuff2), 'Data is equal.');
 
-# Empty cache
+// Empty cache
 Cache::clear();
